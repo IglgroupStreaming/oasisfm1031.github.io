@@ -250,6 +250,16 @@
             word-break: break-all;
             font-family: monospace;
         }
+
+        .quality-info {
+            font-size: 11px;
+            text-align: center;
+            margin-top: 8px;
+            padding: 8px;
+            background: #e8f5e9;
+            border-radius: 12px;
+            color: #2e7d32;
+        }
     </style>
     <script src="https://unpkg.com/peerjs@1.5.4/dist/peerjs.min.js"></script>
 </head>
@@ -336,6 +346,11 @@
             </div>
         </div>
 
+        <!-- Información de calidad recibida -->
+        <div class="quality-info" id="qualityInfo">
+            🎵 Calidad de audio: esperando conexión...
+        </div>
+
         <!-- Información del Transmisor -->
         <div class="transmitter-info" id="transmitterInfo">
             📡 Esperando conexión...
@@ -366,6 +381,7 @@
         let localStream = null;
         let remoteStream = null;
         let currentRxMode = "all";
+        let currentQuality = 96;
         let channelVolumes = {
             main: 1.0,
             alternative: 0.8,
@@ -387,6 +403,7 @@
         const transmitterInfo = document.getElementById('transmitterInfo');
         const mixerPanel = document.getElementById('mixerPanel');
         const debugInfo = document.getElementById('debugInfo');
+        const qualityInfo = document.getElementById('qualityInfo');
 
         // Elementos del mezclador
         const mainVolumeSlider = document.getElementById('mainVolume');
@@ -401,6 +418,25 @@
         function logDebug(msg) {
             console.log(msg);
             if (debugInfo) debugInfo.innerHTML = `🛠️ ${msg}`;
+        }
+
+        // Mostrar calidad del audio recibido
+        function updateQualityInfo(bitrate) {
+            let qualityText = '';
+            let qualityClass = '';
+            if (bitrate <= 64) {
+                qualityText = '📱 Calidad estándar (64 kbps)';
+                qualityClass = 'estándar';
+            } else if (bitrate <= 96) {
+                qualityText = '🎵 Calidad alta (96 kbps)';
+                qualityClass = 'alta';
+            } else {
+                qualityText = '🎧 Calidad profesional (128 kbps)';
+                qualityClass = 'profesional';
+            }
+            qualityInfo.innerHTML = `🎵 ${qualityText} · Audio en vivo`;
+            qualityInfo.style.background = bitrate >= 128 ? '#e8f5e9' : '#fff3e0';
+            currentQuality = bitrate;
         }
 
         // Obtener dispositivos de audio
@@ -609,7 +645,7 @@
                 
                 currentCall = call;
                 
-                // Escuchar información del canal
+                // Escuchar información del canal y calidad
                 const dataConn = peer.connect(linkOrId);
                 dataConn.on('open', () => {
                     dataConn.on('data', (data) => {
@@ -621,6 +657,9 @@
                                 'intercom': '🎧 Intercom'
                             };
                             transmitterInfo.innerHTML = `📡 Transmisor hablando por: <strong>${channelNames[data.channel] || data.channel}</strong>`;
+                        }
+                        if (data.type === 'quality') {
+                            updateQualityInfo(data.bitrate);
                         }
                     });
                 });
@@ -659,6 +698,7 @@
             connectionStatus.innerHTML = '⚪ Desconectado';
             transmitterInfo.innerHTML = '📡 Esperando conexión...';
             audioMeter.style.width = '0%';
+            qualityInfo.innerHTML = '🎵 Calidad de audio: esperando conexión...';
             logDebug('Desconectado');
         }
 
