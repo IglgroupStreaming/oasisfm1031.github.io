@@ -1,0 +1,545 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <title>📡 TRANSMISOR - StreamLink Pro</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+        }
+
+        .container {
+            background: rgba(255,255,255,0.95);
+            border-radius: 48px;
+            padding: 32px;
+            max-width: 600px;
+            width: 100%;
+            box-shadow: 0 25px 45px rgba(0,0,0,0.3);
+        }
+
+        .header {
+            text-align: center;
+            margin-bottom: 32px;
+        }
+
+        .header h1 {
+            font-size: 32px;
+            color: #667eea;
+            margin-bottom: 8px;
+        }
+
+        .header p {
+            color: #666;
+            font-size: 14px;
+        }
+
+        .status-card {
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            border-radius: 32px;
+            padding: 24px;
+            margin-bottom: 24px;
+            color: white;
+            text-align: center;
+        }
+
+        .status-led {
+            display: inline-block;
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            background: #4ade80;
+            animation: pulse 2s infinite;
+            margin-right: 8px;
+        }
+
+        @keyframes pulse {
+            0% { opacity: 0.5; }
+            50% { opacity: 1; box-shadow: 0 0 8px #4ade80; }
+            100% { opacity: 0.5; }
+        }
+
+        .peer-id-box {
+            background: #f0f0f0;
+            border-radius: 20px;
+            padding: 16px;
+            margin: 20px 0;
+            word-break: break-all;
+            font-family: monospace;
+            font-size: 14px;
+            text-align: center;
+            border: 2px solid #667eea;
+        }
+
+        .selector-group {
+            margin: 20px 0;
+        }
+
+        .selector-label {
+            font-weight: 600;
+            margin-bottom: 8px;
+            color: #333;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        select, button {
+            width: 100%;
+            padding: 14px;
+            border-radius: 16px;
+            border: 2px solid #e0e0e0;
+            font-size: 16px;
+            background: white;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        select:focus, button:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+
+        button {
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            color: white;
+            border: none;
+            font-weight: bold;
+            margin-top: 8px;
+        }
+
+        button:active {
+            transform: scale(0.98);
+        }
+
+        .channel-selector {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 12px;
+            margin: 16px 0;
+        }
+
+        .channel-option {
+            background: #f0f0f0;
+            border: 2px solid #e0e0e0;
+            padding: 12px;
+            border-radius: 16px;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.2s;
+            font-weight: 600;
+        }
+
+        .channel-option.active {
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            color: white;
+            border-color: #667eea;
+        }
+
+        .meter-container {
+            background: #f0f0f0;
+            border-radius: 16px;
+            padding: 16px;
+            margin: 20px 0;
+        }
+
+        .meter-bar {
+            height: 40px;
+            background: #e0e0e0;
+            border-radius: 20px;
+            overflow: hidden;
+            margin-top: 8px;
+        }
+
+        .meter-fill {
+            height: 100%;
+            width: 0%;
+            background: linear-gradient(90deg, #4ade80, #22c55e);
+            transition: width 0.05s;
+            border-radius: 20px;
+        }
+
+        .info-text {
+            font-size: 12px;
+            color: #999;
+            text-align: center;
+            margin-top: 20px;
+            padding-top: 20px;
+            border-top: 1px solid #e0e0e0;
+        }
+
+        .copy-btn {
+            background: #667eea;
+            margin-top: 8px;
+        }
+
+        .active-call {
+            background: #e8f5e9;
+            border-radius: 16px;
+            padding: 12px;
+            text-align: center;
+            margin-top: 16px;
+            color: #2e7d32;
+            font-weight: 600;
+        }
+    </style>
+    <script src="https://unpkg.com/peerjs@1.5.4/dist/peerjs.min.js"></script>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>📡 TRANSMISOR</h1>
+            <p>Configura tu micrófono y canales de salida</p>
+        </div>
+
+        <div class="status-card">
+            <div>
+                <span class="status-led"></span>
+                <span id="statusText">Esperando conexión...</span>
+            </div>
+            <div style="font-size: 12px; margin-top: 8px;" id="connectionDetail">Sin receptores conectados</div>
+        </div>
+
+        <!-- Selector de Micrófono -->
+        <div class="selector-group">
+            <div class="selector-label">
+                🎤 MICRÓFONO
+            </div>
+            <select id="microphoneSelect"></select>
+            <div style="font-size: 12px; color: #666; margin-top: 5px;">
+                ✅ Activo: <span id="activeMicName">Selecciona un micrófono</span>
+            </div>
+        </div>
+
+        <!-- Selector de Canal de Salida -->
+        <div class="selector-group">
+            <div class="selector-label">
+                📤 CANAL DE TRANSMISIÓN
+            </div>
+            <div class="channel-selector" id="txChannelSelector">
+                <div class="channel-option active" data-channel="main">🎯 Principal</div>
+                <div class="channel-option" data-channel="alternative">🔄 Alterno</div>
+                <div class="channel-option" data-channel="broadcast">📢 Broadcast</div>
+                <div class="channel-option" data-channel="intercom">🎧 Intercom</div>
+            </div>
+        </div>
+
+        <!-- Medidor de Audio -->
+        <div class="meter-container">
+            <div style="font-weight: 600; margin-bottom: 8px;">🎙️ NIVEL DE AUDIO</div>
+            <div class="meter-bar">
+                <div class="meter-fill" id="audioMeter"></div>
+            </div>
+        </div>
+
+        <!-- Link de Transmisión -->
+        <div class="peer-id-box" id="transmissionLink">
+            Generando enlace...
+        </div>
+        <button class="copy-btn" id="copyLinkBtn">📋 COPIAR ENLACE DE TRANSMISIÓN</button>
+
+        <div class="active-call" id="connectionStatus">
+            ⚪ Sin conexiones activas
+        </div>
+
+        <div class="info-text">
+            💡 <strong>Instrucciones para TRANSMISOR:</strong><br>
+            1. Selecciona tu micrófono<br>
+            2. Elige el canal por el que hablarás<br>
+            3. Comparte el enlace con tu receptor<br>
+            4. ¡Empieza a hablar! El audio fluye automáticamente<br><br>
+            🔗 El enlace se actualiza automáticamente
+        </div>
+    </div>
+
+    <script>
+        let peer = null;
+        let localStream = null;
+        let currentCall = null;
+        let currentTxChannel = "main";
+        let isConnected = false;
+
+        // Elementos DOM
+        const statusText = document.getElementById('statusText');
+        const connectionDetail = document.getElementById('connectionDetail');
+        const transmissionLink = document.getElementById('transmissionLink');
+        const copyLinkBtn = document.getElementById('copyLinkBtn');
+        const microphoneSelect = document.getElementById('microphoneSelect');
+        const activeMicName = document.getElementById('activeMicName');
+        const audioMeter = document.getElementById('audioMeter');
+        const connectionStatus = document.getElementById('connectionStatus');
+
+        // Obtener dispositivos de audio
+        async function getAudioDevices() {
+            try {
+                await navigator.mediaDevices.getUserMedia({ audio: true });
+                const devices = await navigator.mediaDevices.enumerateDevices();
+                return devices.filter(device => device.kind === 'audioinput');
+            } catch (error) {
+                console.error('Error obteniendo dispositivos:', error);
+                return [];
+            }
+        }
+
+        // Llenar selector de micrófonos
+        async function populateMicrophones() {
+            const devices = await getAudioDevices();
+            
+            if (devices.length === 0) {
+                microphoneSelect.innerHTML = '<option>No se encontraron micrófonos</option>';
+                return;
+            }
+
+            microphoneSelect.innerHTML = '';
+            devices.forEach(device => {
+                const option = document.createElement('option');
+                option.value = device.deviceId;
+                option.textContent = device.label || `Micrófono ${device.deviceId.slice(0, 5)}`;
+                microphoneSelect.appendChild(option);
+            });
+        }
+
+        // Inicializar micrófono
+        async function initMicrophone(deviceId = null) {
+            try {
+                let constraints = {
+                    audio: {
+                        echoCancellation: true,
+                        noiseSuppression: true,
+                        autoGainControl: true,
+                        sampleRate: 48000
+                    }
+                };
+
+                if (deviceId) {
+                    constraints.audio.deviceId = { exact: deviceId };
+                }
+
+                const stream = await navigator.mediaDevices.getUserMedia(constraints);
+                
+                if (localStream) {
+                    localStream.getTracks().forEach(track => track.stop());
+                }
+                
+                localStream = stream;
+                localStream.getAudioTracks().forEach(track => track.enabled = true);
+                
+                // Visualizar audio
+                visualizeAudio();
+                
+                const deviceName = microphoneSelect.options[microphoneSelect.selectedIndex]?.textContent || 'Micrófono';
+                activeMicName.textContent = deviceName;
+                
+                return stream;
+            } catch (error) {
+                console.error('Error inicializando micrófono:', error);
+                statusText.textContent = 'Error: Sin micrófono';
+                return null;
+            }
+        }
+
+        // Visualizar nivel de audio
+        function visualizeAudio() {
+            if (!localStream) return;
+            
+            const audioContext = new (window.AudioContext || window.webkitAudioContext)();
+            const source = audioContext.createMediaStreamSource(localStream);
+            const analyser = audioContext.createAnalyser();
+            analyser.fftSize = 256;
+            source.connect(analyser);
+            
+            const dataArray = new Uint8Array(analyser.frequencyBinCount);
+            
+            function updateMeter() {
+                if (!localStream || !localStream.active) return;
+                
+                analyser.getByteTimeDomainData(dataArray);
+                let maxSample = 0;
+                for (let i = 0; i < dataArray.length; i++) {
+                    const sample = Math.abs(dataArray[i] - 128) / 128;
+                    if (sample > maxSample) maxSample = sample;
+                }
+                
+                const level = Math.min(100, maxSample * 100);
+                audioMeter.style.width = `${level}%`;
+                
+                // Cambiar color según nivel
+                if (level > 80) {
+                    audioMeter.style.background = '#ef4444';
+                } else if (level > 50) {
+                    audioMeter.style.background = '#f59e0b';
+                } else {
+                    audioMeter.style.background = '#22c55e';
+                }
+                
+                requestAnimationFrame(updateMeter);
+            }
+            
+            updateMeter();
+        }
+
+        // Crear transmisión
+        async function createTransmission() {
+            await populateMicrophones();
+            await initMicrophone(microphoneSelect.value);
+            
+            if (!localStream) return;
+            
+            const transmissionId = 'tx_' + Math.random().toString(36).substring(2, 10);
+            
+            peer = new Peer(transmissionId, {
+                debug: 1,
+                config: {
+                    iceServers: [
+                        { urls: 'stun:stun.l.google.com:19302' },
+                        { urls: 'stun:stun1.l.google.com:19302' }
+                    ]
+                }
+            });
+            
+            peer.on('open', (id) => {
+                const baseUrl = window.location.href.split('?')[0].split('#')[0];
+                const receiverUrl = baseUrl.replace('transmisor', 'receptor');
+                const fullLink = `${receiverUrl}?join=${id}`;
+                transmissionLink.textContent = fullLink;
+                statusText.textContent = 'Transmitiendo';
+                connectionDetail.textContent = 'Esperando receptores...';
+            });
+            
+            peer.on('call', (call) => {
+                connectionStatus.innerHTML = '🔊 RECEPTOR CONECTADO - Audio fluyendo';
+                connectionDetail.textContent = 'Receptor conectado';
+                call.answer(localStream);
+                
+                // Enviar información del canal
+                const dataConn = peer.connect(call.peer);
+                dataConn.on('open', () => {
+                    setInterval(() => {
+                        if (dataConn && dataConn.open) {
+                            dataConn.send({
+                                type: 'txChannel',
+                                channel: currentTxChannel
+                            });
+                        }
+                    }, 100);
+                });
+                
+                call.on('close', () => {
+                    connectionStatus.innerHTML = '⚪ Receptor desconectado - Esperando...';
+                    connectionDetail.textContent = 'Sin receptores conectados';
+                    isConnected = false;
+                });
+                
+                currentCall = call;
+                isConnected = true;
+            });
+            
+            peer.on('error', (err) => {
+                console.error('Error:', err);
+                statusText.textContent = 'Error en transmisión';
+            });
+        }
+
+        // Cambiar micrófono en vivo
+        async function switchMicrophone(deviceId) {
+            if (!deviceId) return;
+            
+            try {
+                const constraints = {
+                    audio: {
+                        deviceId: { exact: deviceId },
+                        echoCancellation: true,
+                        noiseSuppression: true,
+                        autoGainControl: true
+                    }
+                };
+                
+                const newStream = await navigator.mediaDevices.getUserMedia(constraints);
+                
+                if (localStream) {
+                    const oldTracks = localStream.getAudioTracks();
+                    oldTracks.forEach(track => track.stop());
+                }
+                
+                localStream = newStream;
+                localStream.getAudioTracks().forEach(track => track.enabled = true);
+                
+                // Actualizar en llamada activa
+                if (currentCall && isConnected) {
+                    const senders = currentCall.peerConnection.getSenders();
+                    const audioSender = senders.find(sender => sender.track && sender.track.kind === 'audio');
+                    if (audioSender) {
+                        await audioSender.replaceTrack(localStream.getAudioTracks()[0]);
+                    }
+                }
+                
+                const deviceName = microphoneSelect.options[microphoneSelect.selectedIndex]?.textContent;
+                activeMicName.textContent = deviceName;
+                
+            } catch (error) {
+                console.error('Error cambiando micrófono:', error);
+            }
+        }
+
+        // Configurar selector de canal
+        function setupChannelSelector() {
+            const options = document.querySelectorAll('#txChannelSelector .channel-option');
+            options.forEach(opt => {
+                opt.addEventListener('click', () => {
+                    options.forEach(o => o.classList.remove('active'));
+                    opt.classList.add('active');
+                    currentTxChannel = opt.getAttribute('data-channel');
+                    console.log('Canal cambiado a:', currentTxChannel);
+                });
+            });
+        }
+
+        // Copiar link
+        copyLinkBtn.addEventListener('click', () => {
+            const link = transmissionLink.textContent;
+            if (link && link !== 'Generando enlace...') {
+                navigator.clipboard.writeText(link);
+                alert('✅ Enlace copiado al portapapeles');
+                copyLinkBtn.textContent = '✅ ¡COPIADO!';
+                setTimeout(() => {
+                    copyLinkBtn.textContent = '📋 COPIAR ENLACE DE TRANSMISIÓN';
+                }, 2000);
+            }
+        });
+
+        // Evento cambio de micrófono
+        microphoneSelect.addEventListener('change', (e) => {
+            switchMicrophone(e.target.value);
+        });
+
+        // Inicializar
+        setupChannelSelector();
+        createTransmission();
+
+        // Limpiar al cerrar
+        window.addEventListener('beforeunload', () => {
+            if (localStream) {
+                localStream.getTracks().forEach(track => track.stop());
+            }
+            if (currentCall) {
+                currentCall.close();
+            }
+            if (peer) {
+                peer.destroy();
+            }
+        });
+    </script>
+</body>
+</html>
