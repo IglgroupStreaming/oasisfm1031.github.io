@@ -71,16 +71,37 @@
             100% { opacity: 0.5; }
         }
 
-        .peer-id-box {
-            background: #f0f0f0;
-            border-radius: 20px;
-            padding: 16px;
+        /* Código de transmisión */
+        .code-box {
+            background: linear-gradient(135deg, #1a1a2e, #16213e);
+            border-radius: 32px;
+            padding: 24px;
             margin: 20px 0;
-            word-break: break-all;
-            font-family: monospace;
-            font-size: 14px;
             text-align: center;
             border: 2px solid #667eea;
+        }
+
+        .code-label {
+            font-size: 12px;
+            letter-spacing: 2px;
+            color: #a0a0c0;
+            margin-bottom: 8px;
+        }
+
+        .code-number {
+            font-size: 48px;
+            font-weight: 800;
+            font-family: monospace;
+            letter-spacing: 8px;
+            color: #4ade80;
+            text-shadow: 0 0 10px rgba(74,222,128,0.5);
+            margin: 16px 0;
+        }
+
+        .code-hint {
+            font-size: 11px;
+            color: #888;
+            margin-top: 8px;
         }
 
         .selector-group {
@@ -259,6 +280,11 @@
             word-break: break-all;
             font-family: monospace;
         }
+
+        .regenerate-btn {
+            background: #3a3a5a;
+            margin-top: 8px;
+        }
     </style>
     <script src="https://unpkg.com/peerjs@1.5.4/dist/peerjs.min.js"></script>
 </head>
@@ -266,7 +292,7 @@
     <div class="container">
         <div class="header">
             <h1>📡 TRANSMISOR</h1>
-            <p>Configura tu micrófono y canales de salida</p>
+            <p>Comparte el código con tu receptor</p>
         </div>
 
         <div class="status-card">
@@ -275,6 +301,15 @@
                 <span id="statusText">Iniciando...</span>
             </div>
             <div style="font-size: 12px; margin-top: 8px;" id="connectionDetail">Sin receptores conectados</div>
+        </div>
+
+        <!-- CÓDIGO DE TRANSMISIÓN (reemplaza al link) -->
+        <div class="code-box">
+            <div class="code-label">📢 CÓDIGO DE TRANSMISIÓN</div>
+            <div class="code-number" id="transmissionCode">------</div>
+            <div class="code-hint">Comparte este código de 6 dígitos con tu receptor</div>
+            <button class="copy-btn" id="copyCodeBtn">📋 COPIAR CÓDIGO</button>
+            <button class="regenerate-btn" id="regenerateCodeBtn">🔄 GENERAR NUEVO CÓDIGO</button>
         </div>
 
         <!-- Selector de Micrófono -->
@@ -335,12 +370,6 @@
             </div>
         </div>
 
-        <!-- Link de Transmisión -->
-        <div class="peer-id-box" id="transmissionLink">
-            Generando enlace...
-        </div>
-        <button class="copy-btn" id="copyLinkBtn">📋 COPIAR ENLACE DE TRANSMISIÓN</button>
-
         <div class="active-call" id="connectionStatus">
             ⚪ Sin conexiones activas
         </div>
@@ -351,29 +380,30 @@
 
         <div class="info-text">
             💡 <strong>Instrucciones para TRANSMISOR:</strong><br>
-            1. Selecciona tu micrófono<br>
-            2. Elige la calidad de audio (mayor calidad = mejor sonido)<br>
-            3. Elige el canal por el que hablarás<br>
-            4. Comparte el enlace con tu receptor<br>
-            5. ¡Empieza a hablar! El audio fluye automáticamente<br><br>
-            🔗 El enlace se actualiza automáticamente
+            1. Selecciona tu micrófono y calidad de audio<br>
+            2. Elige el canal por el que hablarás<br>
+            3. Comparte el <strong>CÓDIGO DE 6 DÍGITOS</strong> con tu receptor<br>
+            4. El receptor usará ese código para conectarse<br>
+            5. ¡Empieza a hablar! El audio fluye automáticamente
         </div>
     </div>
 
     <script>
-        // --- Versión COMPLETA con control de calidad ---
+        // --- Versión con CÓDIGO NUMÉRICO ---
         let peer = null;
         let localStream = null;
         let currentCall = null;
         let currentTxChannel = "main";
         let isConnected = false;
         let currentPeerId = null;
+        let currentCode = null;
 
         // Elementos DOM
         const statusText = document.getElementById('statusText');
         const connectionDetail = document.getElementById('connectionDetail');
-        const transmissionLinkDiv = document.getElementById('transmissionLink');
-        const copyLinkBtn = document.getElementById('copyLinkBtn');
+        const transmissionCode = document.getElementById('transmissionCode');
+        const copyCodeBtn = document.getElementById('copyCodeBtn');
+        const regenerateCodeBtn = document.getElementById('regenerateCodeBtn');
         const microphoneSelect = document.getElementById('microphoneSelect');
         const activeMicName = document.getElementById('activeMicName');
         const audioMeter = document.getElementById('audioMeter');
@@ -383,6 +413,11 @@
         function logDebug(msg) { 
             console.log(msg); 
             if(debugInfo) debugInfo.innerHTML = `🛠️ ${msg}`; 
+        }
+
+        // Generar código aleatorio de 6 dígitos
+        function generateCode() {
+            return Math.floor(100000 + Math.random() * 900000).toString();
         }
 
         // Obtener dispositivos
@@ -414,23 +449,13 @@
 
         async function initMicrophone(deviceId = null) {
             try {
-                // Obtener calidad seleccionada
                 const selectedQuality = parseInt(document.querySelector('input[name="audioQuality"]:checked')?.value || 96);
-                
-                // Configurar parámetros según calidad
                 let sampleRate;
                 switch(selectedQuality) {
-                    case 64:
-                        sampleRate = 32000;
-                        break;
-                    case 96:
-                        sampleRate = 44100;
-                        break;
-                    case 128:
-                        sampleRate = 48000;
-                        break;
-                    default:
-                        sampleRate = 44100;
+                    case 64: sampleRate = 32000; break;
+                    case 96: sampleRate = 44100; break;
+                    case 128: sampleRate = 48000; break;
+                    default: sampleRate = 44100;
                 }
                 
                 let constraints = {
@@ -453,9 +478,7 @@
                 }
                 
                 localStream = stream;
-                localStream.getAudioTracks().forEach(track => {
-                    track.enabled = true;
-                });
+                localStream.getAudioTracks().forEach(track => track.enabled = true);
                 
                 visualizeAudio();
                 
@@ -472,13 +495,10 @@
             }
         }
 
-        // Cambiar calidad de audio en vivo
         async function switchQuality() {
             if (!localStream) return;
-            
             const selectedQuality = parseInt(document.querySelector('input[name="audioQuality"]:checked')?.value || 96);
             const currentDeviceId = microphoneSelect.value;
-            
             await initMicrophone(currentDeviceId);
             
             if (currentCall && isConnected && localStream) {
@@ -488,7 +508,6 @@
                     await audioSender.replaceTrack(localStream.getAudioTracks()[0]);
                     logDebug(`Calidad cambiada a ${selectedQuality}kbps en vivo`);
                     
-                    // Notificar al receptor sobre el cambio de calidad
                     const dataConn = peer.connect(currentCall.peer);
                     dataConn.on('open', () => {
                         dataConn.send({ type: 'quality', bitrate: selectedQuality });
@@ -522,12 +541,14 @@
             updateMeter();
         }
 
-        async function createTransmission() {
-            await populateMicrophones();
-            if (microphoneSelect.value) await initMicrophone(microphoneSelect.value);
-            else logDebug('Esperando selección de micrófono');
-
-            const transmissionId = 'tx_' + Math.random().toString(36).substring(2, 10);
+        async function createTransmissionWithCode(code) {
+            if (peer) {
+                peer.destroy();
+            }
+            
+            // Usar el código como ID de Peer (prefijo tx_)
+            const transmissionId = 'tx_' + code;
+            
             peer = new Peer(transmissionId, { 
                 debug: 2, 
                 config: { 
@@ -541,13 +562,10 @@
             
             peer.on('open', (id) => {
                 currentPeerId = id;
-                const baseUrl = window.location.href.substring(0, window.location.href.lastIndexOf('/') + 1);
-                const receiverPage = baseUrl + 'receptor.html';
-                const fullLink = `${receiverPage}?join=${id}`;
-                transmissionLinkDiv.textContent = fullLink;
+                transmissionCode.textContent = code;
                 statusText.textContent = 'Transmitiendo - Listo';
                 connectionDetail.textContent = 'Esperando receptores...';
-                logDebug(`Peer creado. ID: ${id} | Link: ${fullLink}`);
+                logDebug(`Transmisión creada. Código: ${code} | Peer ID: ${id}`);
             });
             
             peer.on('call', (call) => {
@@ -579,6 +597,15 @@
                 logDebug(`Peer error: ${err.message}`); 
                 statusText.textContent = 'Error en transmisión'; 
             });
+        }
+
+        async function startNewTransmission() {
+            if (localStream) {
+                await initMicrophone(microphoneSelect.value);
+            }
+            const newCode = generateCode();
+            currentCode = newCode;
+            await createTransmissionWithCode(newCode);
         }
 
         async function switchMicrophone(deviceId) {
@@ -624,14 +651,21 @@
             });
         }
 
-        copyLinkBtn.addEventListener('click', () => { 
-            const link = transmissionLinkDiv.textContent; 
-            if (link && link !== 'Generando enlace...') { 
-                navigator.clipboard.writeText(link); 
-                alert('✅ Enlace copiado'); 
-                copyLinkBtn.textContent = '✅ ¡COPIADO!'; 
-                setTimeout(() => copyLinkBtn.textContent = '📋 COPIAR ENLACE DE TRANSMISIÓN', 2000); 
+        copyCodeBtn.addEventListener('click', () => { 
+            const code = transmissionCode.textContent; 
+            if (code && code !== '------') { 
+                navigator.clipboard.writeText(code); 
+                alert('✅ Código ' + code + ' copiado al portapapeles'); 
+                copyCodeBtn.textContent = '✅ ¡COPIADO!'; 
+                setTimeout(() => copyCodeBtn.textContent = '📋 COPIAR CÓDIGO', 2000); 
             } 
+        });
+        
+        regenerateCodeBtn.addEventListener('click', async () => {
+            if (confirm('¿Generar nuevo código? La conexión actual se cerrará.')) {
+                if (currentCall) currentCall.close();
+                await startNewTransmission();
+            }
         });
         
         microphoneSelect.addEventListener('change', (e) => { if(e.target.value) switchMicrophone(e.target.value); });
@@ -654,7 +688,17 @@
         });
 
         setupChannelSelector();
-        createTransmission();
+        
+        // Inicializar todo
+        async function init() {
+            await populateMicrophones();
+            if (microphoneSelect.value) {
+                await initMicrophone(microphoneSelect.value);
+            }
+            await startNewTransmission();
+        }
+        
+        init();
 
         window.addEventListener('beforeunload', () => { 
             if (localStream) localStream.getTracks().forEach(track => track.stop()); 
