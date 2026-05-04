@@ -76,8 +76,59 @@
             100% { opacity: 0.5; }
         }
 
-        .input-group {
+        /* Código de conexión */
+        .code-input-box {
+            background: linear-gradient(135deg, #1a1a2e, #16213e);
+            border-radius: 32px;
+            padding: 24px;
             margin: 20px 0;
+            text-align: center;
+        }
+
+        .code-label {
+            font-size: 12px;
+            letter-spacing: 2px;
+            color: #a0a0c0;
+            margin-bottom: 8px;
+        }
+
+        .code-input-wrapper {
+            display: flex;
+            gap: 12px;
+            margin: 16px 0;
+        }
+
+        .code-input {
+            flex: 1;
+            text-align: center;
+            font-size: 32px;
+            font-weight: 800;
+            font-family: monospace;
+            letter-spacing: 4px;
+            padding: 16px;
+            border: 2px solid #4caf50;
+            border-radius: 20px;
+            background: white;
+            color: #333;
+        }
+
+        .code-input:focus {
+            outline: none;
+            border-color: #667eea;
+            box-shadow: 0 0 10px rgba(102,126,234,0.3);
+        }
+
+        .connect-code-btn {
+            background: linear-gradient(135deg, #4caf50, #2e7d32);
+            padding: 16px 24px;
+            font-size: 18px;
+            font-weight: bold;
+        }
+
+        .code-hint {
+            font-size: 11px;
+            color: #888;
+            margin-top: 8px;
         }
 
         .selector-group {
@@ -267,7 +318,7 @@
     <div class="container">
         <div class="header">
             <h1>🎧 RECEPTOR</h1>
-            <p>Escucha y mezcla los canales del transmisor</p>
+            <p>Ingresa el código de 6 dígitos del transmisor</p>
         </div>
 
         <div class="status-card">
@@ -278,13 +329,14 @@
             <div style="font-size: 12px; margin-top: 8px;" id="connectionDetail">Sin conexión activa</div>
         </div>
 
-        <!-- Link de conexión -->
-        <div class="input-group">
-            <div class="selector-label">
-                🔗 LINK DEL TRANSMISOR
+        <!-- CÓDIGO DE CONEXIÓN -->
+        <div class="code-input-box">
+            <div class="code-label">🔑 CÓDIGO DE TRANSMISIÓN</div>
+            <div class="code-input-wrapper">
+                <input type="text" class="code-input" id="codeInput" maxlength="6" placeholder="000000" inputmode="numeric">
             </div>
-            <input type="text" id="joinLinkInput" placeholder="Pega aquí el enlace del transmisor">
-            <button id="connectBtn">🔌 CONECTAR A TRANSMISOR</button>
+            <button class="connect-code-btn" id="connectCodeBtn">🔌 CONECTAR CON CÓDIGO</button>
+            <div class="code-hint">Ingresa el código de 6 dígitos que te dio el transmisor</div>
         </div>
 
         <!-- Selector de Micrófono (opcional) -->
@@ -361,13 +413,13 @@
         </div>
 
         <div class="debug" id="debugInfo">
-            🛠️ Depuración: Listo para conectar
+            🛠️ Depuración: Ingresa un código de 6 dígitos
         </div>
 
         <div class="info-text">
             💡 <strong>Instrucciones para RECEPTOR:</strong><br>
-            1. Recibe el enlace del transmisor<br>
-            2. Pega el enlace y presiona "Conectar"<br>
+            1. Recibe el <strong>CÓDIGO DE 6 DÍGITOS</strong> del transmisor<br>
+            2. Ingresa el código y presiona "Conectar"<br>
             3. Selecciona qué canal(es) escuchar<br>
             4. Ajusta la mezcla de canales (opcional)<br>
             5. ¡Escucha el audio en vivo!<br><br>
@@ -395,8 +447,8 @@
         const statusText = document.getElementById('statusText');
         const statusLed = document.getElementById('statusLed');
         const connectionDetail = document.getElementById('connectionDetail');
-        const joinLinkInput = document.getElementById('joinLinkInput');
-        const connectBtn = document.getElementById('connectBtn');
+        const codeInput = document.getElementById('codeInput');
+        const connectCodeBtn = document.getElementById('connectCodeBtn');
         const microphoneSelect = document.getElementById('microphoneSelect');
         const audioMeter = document.getElementById('audioMeter');
         const connectionStatus = document.getElementById('connectionStatus');
@@ -420,26 +472,15 @@
             if (debugInfo) debugInfo.innerHTML = `🛠️ ${msg}`;
         }
 
-        // Mostrar calidad del audio recibido
         function updateQualityInfo(bitrate) {
             let qualityText = '';
-            let qualityClass = '';
-            if (bitrate <= 64) {
-                qualityText = '📱 Calidad estándar (64 kbps)';
-                qualityClass = 'estándar';
-            } else if (bitrate <= 96) {
-                qualityText = '🎵 Calidad alta (96 kbps)';
-                qualityClass = 'alta';
-            } else {
-                qualityText = '🎧 Calidad profesional (128 kbps)';
-                qualityClass = 'profesional';
-            }
+            if (bitrate <= 64) qualityText = '📱 Calidad estándar (64 kbps)';
+            else if (bitrate <= 96) qualityText = '🎵 Calidad alta (96 kbps)';
+            else qualityText = '🎧 Calidad profesional (128 kbps)';
             qualityInfo.innerHTML = `🎵 ${qualityText} · Audio en vivo`;
-            qualityInfo.style.background = bitrate >= 128 ? '#e8f5e9' : '#fff3e0';
             currentQuality = bitrate;
         }
 
-        // Obtener dispositivos de audio
         async function getAudioDevices() {
             try {
                 await navigator.mediaDevices.getUserMedia({ audio: true });
@@ -451,10 +492,8 @@
             }
         }
 
-        // Llenar selector de micrófonos
         async function populateMicrophones() {
             const devices = await getAudioDevices();
-            
             devices.forEach(device => {
                 const option = document.createElement('option');
                 option.value = device.deviceId;
@@ -463,7 +502,6 @@
             });
         }
 
-        // Inicializar micrófono local (opcional)
         async function initLocalMicrophone(deviceId = null) {
             if (!deviceId || deviceId === 'default') {
                 if (localStream) {
@@ -493,7 +531,6 @@
                 localStream = stream;
                 localStream.getAudioTracks().forEach(track => track.enabled = true);
                 
-                // Actualizar en llamada activa
                 if (currentCall && remoteStream) {
                     const senders = currentCall.peerConnection.getSenders();
                     const audioSender = senders.find(sender => sender.track && sender.track.kind === 'audio');
@@ -510,7 +547,6 @@
             }
         }
 
-        // Visualizar audio remoto
         function visualizeRemoteAudio(stream) {
             if (!stream) return;
             
@@ -534,14 +570,12 @@
                 
                 let level = Math.min(100, maxSample * 100);
                 
-                // Aplicar volumen según el modo de escucha
                 if (currentRxMode !== 'all') {
                     level = level * channelVolumes[currentRxMode];
                 }
                 
                 audioMeter.style.width = `${level}%`;
                 
-                // Cambiar color según nivel
                 if (level > 80) {
                     audioMeter.style.background = '#ef4444';
                 } else if (level > 50) {
@@ -556,7 +590,6 @@
             updateMeter();
         }
 
-        // Reproducir audio remoto con mezcla
         function playRemoteAudio(stream) {
             if (remoteAudioElement) {
                 remoteAudioElement.pause();
@@ -587,29 +620,28 @@
             updateVolume();
         }
 
-        // Conectar a transmisor
-        async function connectToTransmitter() {
-            let linkOrId = joinLinkInput.value.trim();
+        async function connectWithCode() {
+            let code = codeInput.value.trim();
             
-            if (!linkOrId) {
-                alert('Ingresa el enlace del transmisor');
+            if (!code || code.length !== 6 || !/^\d+$/.test(code)) {
+                alert('Ingresa un código válido de 6 dígitos');
                 return;
             }
             
-            // Extraer ID del link
-            if (linkOrId.includes('?join=')) {
-                linkOrId = linkOrId.split('?join=')[1].split('&')[0].split('#')[0];
-            }
+            const transmissionId = 'tx_' + code;
             
-            logDebug(`Conectando a ID: ${linkOrId}`);
+            logDebug(`Conectando con código: ${code} → ID: ${transmissionId}`);
             statusText.textContent = 'Conectando...';
             statusLed.style.animation = 'pulse 2s infinite';
-            connectionDetail.textContent = 'Estableciendo conexión...';
+            connectionDetail.textContent = 'Buscando transmisor...';
             
-            // Inicializar micrófono local si está seleccionado
             await initLocalMicrophone(microphoneSelect.value);
             
             const receiverId = 'rx_' + Math.random().toString(36).substring(2, 10);
+            
+            if (peer) {
+                peer.destroy();
+            }
             
             peer = new Peer(receiverId, {
                 debug: 1,
@@ -622,9 +654,9 @@
             });
             
             peer.on('open', (id) => {
-                logDebug(`Peer receptor abierto: ${id}. Llamando a ${linkOrId}...`);
+                logDebug(`Peer receptor abierto: ${id}. Llamando a ${transmissionId}...`);
                 
-                const call = peer.call(linkOrId, localStream);
+                const call = peer.call(transmissionId, localStream);
                 
                 call.on('stream', (stream) => {
                     remoteStream = stream;
@@ -645,8 +677,7 @@
                 
                 currentCall = call;
                 
-                // Escuchar información del canal y calidad
-                const dataConn = peer.connect(linkOrId);
+                const dataConn = peer.connect(transmissionId);
                 dataConn.on('open', () => {
                     dataConn.on('data', (data) => {
                         if (data.type === 'txChannel') {
@@ -668,9 +699,9 @@
             peer.on('error', (err) => {
                 logDebug(`Error Peer: ${err.message}`);
                 statusText.textContent = 'Error de conexión';
-                connectionDetail.textContent = 'Verifica el enlace';
+                connectionDetail.textContent = 'Código incorrecto o transmisor inactivo';
                 connectionStatus.innerHTML = '❌ Error de conexión';
-                alert('No se pudo conectar. Verifica que el transmisor esté activo.');
+                alert('No se pudo conectar. Verifica que el código sea correcto y que el transmisor esté activo.');
             });
         }
 
@@ -702,7 +733,6 @@
             logDebug('Desconectado');
         }
 
-        // Configurar selector de canal RX
         function setupRxChannelSelector() {
             const options = document.querySelectorAll('#rxChannelSelector .channel-option');
             options.forEach(opt => {
@@ -710,16 +740,12 @@
                     options.forEach(o => o.classList.remove('active'));
                     opt.classList.add('active');
                     currentRxMode = opt.getAttribute('data-rx-channel');
-                    
-                    // Mostrar/ocultar mezclador
                     mixerPanel.style.display = currentRxMode === 'all' ? 'block' : 'none';
-                    
                     logDebug(`Modo de escucha: ${currentRxMode}`);
                 });
             });
         }
 
-        // Configurar mezclador
         function setupMixer() {
             const sliders = [
                 { slider: mainVolumeSlider, value: mainVolumeValue, channel: 'main' },
@@ -733,23 +759,24 @@
                     const val = e.target.value;
                     value.textContent = `${val}%`;
                     channelVolumes[channel] = val / 100;
-                    logDebug(`Volumen ${channel}: ${val}%`);
                 });
             });
         }
 
-        // Eventos
-        connectBtn.addEventListener('click', connectToTransmitter);
+        connectCodeBtn.addEventListener('click', connectWithCode);
         microphoneSelect.addEventListener('change', (e) => {
             initLocalMicrophone(e.target.value);
         });
 
-        // Inicializar
+        // Permitir solo números en el input
+        codeInput.addEventListener('input', (e) => {
+            e.target.value = e.target.value.replace(/[^0-9]/g, '').slice(0, 6);
+        });
+
         setupRxChannelSelector();
         setupMixer();
         populateMicrophones();
 
-        // Limpiar al cerrar
         window.addEventListener('beforeunload', () => {
             if (localStream) {
                 localStream.getTracks().forEach(track => track.stop());
