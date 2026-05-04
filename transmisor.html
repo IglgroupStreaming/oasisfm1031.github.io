@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-    <title>📡 TRANSMISOR - StreamLink Pro</title>
+    <title>📡 TRANSMISOR - StreamLink IglPro</title>
     <style>
         * {
             margin: 0;
@@ -71,7 +71,6 @@
             100% { opacity: 0.5; }
         }
 
-        /* Código de transmisión */
         .code-box {
             background: linear-gradient(135deg, #1a1a2e, #16213e);
             border-radius: 32px;
@@ -169,7 +168,6 @@
             border-color: #667eea;
         }
 
-        /* Selector de Calidad de Audio */
         .quality-selector {
             margin: 20px 0;
         }
@@ -260,6 +258,11 @@
             margin-top: 8px;
         }
 
+        .regenerate-btn {
+            background: #3a3a5a;
+            margin-top: 8px;
+        }
+
         .active-call {
             background: #e8f5e9;
             border-radius: 16px;
@@ -280,18 +283,13 @@
             word-break: break-all;
             font-family: monospace;
         }
-
-        .regenerate-btn {
-            background: #3a3a5a;
-            margin-top: 8px;
-        }
     </style>
     <script src="https://unpkg.com/peerjs@1.5.4/dist/peerjs.min.js"></script>
 </head>
 <body>
     <div class="container">
         <div class="header">
-            <h1>📡 TRANSMISOR</h1>
+            <h1>📡 TRANSMISOR OASIS FM 103.1</h1>
             <p>Comparte el código con tu receptor</p>
         </div>
 
@@ -303,7 +301,6 @@
             <div style="font-size: 12px; margin-top: 8px;" id="connectionDetail">Sin receptores conectados</div>
         </div>
 
-        <!-- CÓDIGO DE TRANSMISIÓN (reemplaza al link) -->
         <div class="code-box">
             <div class="code-label">📢 CÓDIGO DE TRANSMISIÓN</div>
             <div class="code-number" id="transmissionCode">------</div>
@@ -312,22 +309,16 @@
             <button class="regenerate-btn" id="regenerateCodeBtn">🔄 GENERAR NUEVO CÓDIGO</button>
         </div>
 
-        <!-- Selector de Micrófono -->
         <div class="selector-group">
-            <div class="selector-label">
-                🎤 MICRÓFONO
-            </div>
+            <div class="selector-label">🎤 MICRÓFONO</div>
             <select id="microphoneSelect"></select>
             <div style="font-size: 12px; color: #666; margin-top: 5px;">
                 ✅ Activo: <span id="activeMicName">Selecciona un micrófono</span>
             </div>
         </div>
 
-        <!-- Selector de Canal de Salida -->
         <div class="selector-group">
-            <div class="selector-label">
-                📤 CANAL DE TRANSMISIÓN
-            </div>
+            <div class="selector-label">📤 CANAL DE TRANSMISIÓN</div>
             <div class="channel-selector" id="txChannelSelector">
                 <div class="channel-option active" data-channel="main">🎯 Principal</div>
                 <div class="channel-option" data-channel="alternative">🔄 Alterno</div>
@@ -336,60 +327,67 @@
             </div>
         </div>
 
-        <!-- Selector de Calidad de Audio -->
         <div class="quality-selector">
-            <div class="selector-label">
-                🎚️ CALIDAD DE AUDIO
-                <span style="font-size: 11px;">(Mayor calidad = más ancho de banda)</span>
-            </div>
+            <div class="selector-label">🎚️ CALIDAD DE AUDIO</div>
             <div class="quality-option" data-quality="64">
                 <input type="radio" name="audioQuality" id="quality64" value="64">
                 <label for="quality64">📱 Calidad estándar</label>
                 <span class="quality-badge">64 kbps</span>
-                <span style="font-size: 11px; color: #666;">~ 28 MB/hora · Ideal para móvil</span>
+                <span style="font-size: 11px; color: #666;">~ 28 MB/hora</span>
             </div>
             <div class="quality-option selected" data-quality="96">
                 <input type="radio" name="audioQuality" id="quality96" value="96" checked>
                 <label for="quality96">🎵 Calidad alta</label>
                 <span class="quality-badge">96 kbps</span>
-                <span style="font-size: 11px; color: #666;">~ 42 MB/hora · Recomendado</span>
+                <span style="font-size: 11px; color: #666;">~ 42 MB/hora</span>
             </div>
             <div class="quality-option" data-quality="128">
                 <input type="radio" name="audioQuality" id="quality128" value="128">
                 <label for="quality128">🎧 Calidad profesional</label>
                 <span class="quality-badge premium">128 kbps</span>
-                <span style="font-size: 11px; color: #666;">~ 56 MB/hora · Máxima fidelidad</span>
+                <span style="font-size: 11px; color: #666;">~ 56 MB/hora</span>
             </div>
         </div>
 
-        <!-- Medidor de Audio -->
         <div class="meter-container">
-            <div style="font-weight: 600; margin-bottom: 8px;">🎙️ NIVEL DE AUDIO</div>
+            <div style="font-weight: 600; margin-bottom: 8px;">🎙️ NIVEL DE AUDIO (TX)</div>
             <div class="meter-bar">
                 <div class="meter-fill" id="audioMeter"></div>
             </div>
         </div>
 
-        <div class="active-call" id="connectionStatus">
-            ⚪ Sin conexiones activas
+        <!-- RETORNO DE AUDIO (escuchar al receptor) -->
+        <div class="meter-container" id="returnMeterContainer" style="margin-top: 16px;">
+            <div style="font-weight: 600; margin-bottom: 8px; display: flex; justify-content: space-between;">
+                <span>🔄 RETORNO (audio del receptor)</span>
+                <span style="font-size: 11px; color: #888;" id="returnStatus">⚪ Sin retorno</span>
+            </div>
+            <div class="meter-bar">
+                <div class="meter-fill" id="returnMeter" style="background: linear-gradient(90deg, #f59e0b, #ea580c);"></div>
+            </div>
         </div>
 
-        <div class="debug" id="debugInfo">
-            🛠️ Depuración: Inicializando...
+        <!-- Control de volumen del retorno -->
+        <div style="display: flex; align-items: center; gap: 12px; margin-top: 8px; margin-bottom: 16px;">
+            <span style="font-size: 11px; color: #666;">🔊 Volumen retorno:</span>
+            <input type="range" id="returnVolume" min="0" max="100" value="80" style="flex: 1; height: 4px;">
+            <span id="returnVolumeValue" style="font-size: 11px; color: #666;">80%</span>
         </div>
+
+        <div class="active-call" id="connectionStatus">⚪ Sin conexiones activas</div>
+        <div class="debug" id="debugInfo">🛠️ Depuración: Inicializando...</div>
 
         <div class="info-text">
             💡 <strong>Instrucciones para TRANSMISOR:</strong><br>
             1. Selecciona tu micrófono y calidad de audio<br>
             2. Elige el canal por el que hablarás<br>
             3. Comparte el <strong>CÓDIGO DE 6 DÍGITOS</strong> con tu receptor<br>
-            4. El receptor usará ese código para conectarse<br>
-            5. ¡Empieza a hablar! El audio fluye automáticamente
+            4. ¡Cuando el receptor se conecte, podrás escucharlo en RETORNO!<br>
+            5. Comunicación FULL DUPLEX (ambos pueden hablar y escuchar)
         </div>
     </div>
 
     <script>
-        // --- Versión con CÓDIGO NUMÉRICO ---
         let peer = null;
         let localStream = null;
         let currentCall = null;
@@ -397,8 +395,12 @@
         let isConnected = false;
         let currentPeerId = null;
         let currentCode = null;
+        
+        // Variables para el RETORNO
+        let returnStream = null;
+        let returnAudioElement = null;
+        let returnGainNode = null;
 
-        // Elementos DOM
         const statusText = document.getElementById('statusText');
         const connectionDetail = document.getElementById('connectionDetail');
         const transmissionCode = document.getElementById('transmissionCode');
@@ -409,25 +411,25 @@
         const audioMeter = document.getElementById('audioMeter');
         const connectionStatusDiv = document.getElementById('connectionStatus');
         const debugInfo = document.getElementById('debugInfo');
+        const returnStatus = document.getElementById('returnStatus');
+        const returnMeter = document.getElementById('returnMeter');
 
         function logDebug(msg) { 
             console.log(msg); 
-            if(debugInfo) debugInfo.innerHTML = `🛠️ ${msg}`; 
+            if(debugInfo) debugInfo.innerHTML = `🛠️ ${msg.substring(0, 100)}`; 
         }
 
-        // Generar código aleatorio de 6 dígitos
         function generateCode() {
             return Math.floor(100000 + Math.random() * 900000).toString();
         }
 
-        // Obtener dispositivos
         async function getAudioDevices() {
             try {
                 await navigator.mediaDevices.getUserMedia({ audio: true });
                 const devices = await navigator.mediaDevices.enumerateDevices();
                 return devices.filter(device => device.kind === 'audioinput');
             } catch (error) { 
-                logDebug(`Error obteniendo dispositivos: ${error.message}`); 
+                logDebug(`Error: ${error.message}`); 
                 return []; 
             }
         }
@@ -473,9 +475,7 @@
                 
                 const stream = await navigator.mediaDevices.getUserMedia(constraints);
                 
-                if (localStream) {
-                    localStream.getTracks().forEach(track => track.stop());
-                }
+                if (localStream) localStream.getTracks().forEach(track => track.stop());
                 
                 localStream = stream;
                 localStream.getAudioTracks().forEach(track => track.enabled = true);
@@ -486,34 +486,12 @@
                 activeMicName.textContent = `${deviceName} (${selectedQuality}kbps)`;
                 statusText.textContent = `Micrófono activo - ${selectedQuality}kbps`;
                 
-                logDebug(`Micrófono iniciado: ${deviceName} - Calidad: ${selectedQuality}kbps a ${sampleRate}Hz`);
+                logDebug(`Micrófono: ${deviceName} - ${selectedQuality}kbps`);
                 return stream;
             } catch (error) {
                 logDebug(`Error micrófono: ${error.message}`);
                 statusText.textContent = 'Error: Sin micrófono';
                 return null;
-            }
-        }
-
-        async function switchQuality() {
-            if (!localStream) return;
-            const selectedQuality = parseInt(document.querySelector('input[name="audioQuality"]:checked')?.value || 96);
-            const currentDeviceId = microphoneSelect.value;
-            await initMicrophone(currentDeviceId);
-            
-            if (currentCall && isConnected && localStream) {
-                const senders = currentCall.peerConnection.getSenders();
-                const audioSender = senders.find(sender => sender.track && sender.track.kind === 'audio');
-                if (audioSender && localStream) {
-                    await audioSender.replaceTrack(localStream.getAudioTracks()[0]);
-                    logDebug(`Calidad cambiada a ${selectedQuality}kbps en vivo`);
-                    
-                    const dataConn = peer.connect(currentCall.peer);
-                    dataConn.on('open', () => {
-                        dataConn.send({ type: 'quality', bitrate: selectedQuality });
-                        setTimeout(() => dataConn.close(), 100);
-                    });
-                }
             }
         }
 
@@ -541,12 +519,58 @@
             updateMeter();
         }
 
-        async function createTransmissionWithCode(code) {
-            if (peer) {
-                peer.destroy();
+        function visualizeReturnAudio(stream) {
+            if (!stream) return;
+            const audioContext = new (window.AudioContext || window.webkitAudioContext)();
+            const source = audioContext.createMediaStreamSource(stream);
+            const analyser = audioContext.createAnalyser();
+            analyser.fftSize = 256;
+            source.connect(analyser);
+            const dataArray = new Uint8Array(analyser.frequencyBinCount);
+            function updateReturnMeter() {
+                if (!stream || !stream.active) {
+                    if (returnStatus) returnStatus.innerHTML = '⚪ Sin retorno';
+                    if (returnMeter) returnMeter.style.width = '0%';
+                    return;
+                }
+                analyser.getByteTimeDomainData(dataArray);
+                let maxSample = 0;
+                for (let i = 0; i < dataArray.length; i++) {
+                    const sample = Math.abs(dataArray[i] - 128) / 128;
+                    if (sample > maxSample) maxSample = sample;
+                }
+                const level = Math.min(100, maxSample * 100);
+                if (returnMeter) returnMeter.style.width = `${level}%`;
+                if (level > 5) {
+                    if (returnStatus) returnStatus.innerHTML = '🔊 RECIBIENDO RETORNO';
+                } else {
+                    if (returnStatus) returnStatus.innerHTML = '🎧 Retorno activo';
+                }
+                requestAnimationFrame(updateReturnMeter);
             }
-            
-            // Usar el código como ID de Peer (prefijo tx_)
+            updateReturnMeter();
+        }
+
+        function playReturnAudio(stream) {
+            if (returnAudioElement) {
+                returnAudioElement.pause();
+                returnAudioElement.srcObject = null;
+            }
+            const audioContext = new (window.AudioContext || window.webkitAudioContext)();
+            const source = audioContext.createMediaStreamSource(stream);
+            returnGainNode = audioContext.createGain();
+            returnGainNode.gain.value = 0.8;
+            source.connect(returnGainNode);
+            returnGainNode.connect(audioContext.destination);
+            returnAudioElement = new Audio();
+            returnAudioElement.srcObject = stream;
+            returnAudioElement.autoplay = true;
+            visualizeReturnAudio(stream);
+            logDebug('Retorno activado - Escuchando al receptor');
+        }
+
+        async function createTransmissionWithCode(code) {
+            if (peer) peer.destroy();
             const transmissionId = 'tx_' + code;
             
             peer = new Peer(transmissionId, { 
@@ -565,13 +589,21 @@
                 transmissionCode.textContent = code;
                 statusText.textContent = 'Transmitiendo - Listo';
                 connectionDetail.textContent = 'Esperando receptores...';
-                logDebug(`Transmisión creada. Código: ${code} | Peer ID: ${id}`);
+                logDebug(`Código: ${code} | Peer: ${id}`);
             });
             
             peer.on('call', (call) => {
-                connectionStatusDiv.innerHTML = '🔊 RECEPTOR CONECTADO - Audio fluyendo';
-                connectionDetail.textContent = 'Receptor conectado';
+                connectionStatusDiv.innerHTML = '🔊 RECEPTOR CONECTADO';
+                connectionDetail.textContent = 'Receptor conectado - Comunicación FULL DUPLEX';
+                
                 call.answer(localStream);
+                
+                // RECIBIR STREAM DEL RECEPTOR (RETORNO)
+                call.on('stream', (remoteStream) => {
+                    returnStream = remoteStream;
+                    playReturnAudio(remoteStream);
+                    if (returnStatus) returnStatus.innerHTML = '🎧 RETORNO ACTIVO';
+                });
                 
                 const dataConn = peer.connect(call.peer);
                 dataConn.on('open', () => { 
@@ -587,22 +619,26 @@
                 call.on('close', () => { 
                     connectionStatusDiv.innerHTML = '⚪ Receptor desconectado'; 
                     connectionDetail.textContent = 'Sin receptores'; 
-                    isConnected = false; 
+                    isConnected = false;
+                    if (returnAudioElement) {
+                        returnAudioElement.pause();
+                        returnAudioElement.srcObject = null;
+                    }
+                    if (returnStatus) returnStatus.innerHTML = '⚪ Sin retorno';
+                    if (returnMeter) returnMeter.style.width = '0%';
                 });
                 currentCall = call;
                 isConnected = true;
             });
             
             peer.on('error', (err) => { 
-                logDebug(`Peer error: ${err.message}`); 
+                logDebug(`Error: ${err.message}`); 
                 statusText.textContent = 'Error en transmisión'; 
             });
         }
 
         async function startNewTransmission() {
-            if (localStream) {
-                await initMicrophone(microphoneSelect.value);
-            }
+            if (localStream) await initMicrophone(microphoneSelect.value);
             const newCode = generateCode();
             currentCode = newCode;
             await createTransmissionWithCode(newCode);
@@ -613,7 +649,6 @@
             try {
                 const selectedQuality = parseInt(document.querySelector('input[name="audioQuality"]:checked')?.value || 96);
                 let sampleRate = selectedQuality === 64 ? 32000 : (selectedQuality === 96 ? 44100 : 48000);
-                
                 const constraints = { 
                     audio: { 
                         deviceId: { exact: deviceId }, 
@@ -634,9 +669,9 @@
                 }
                 const deviceName = microphoneSelect.options[microphoneSelect.selectedIndex]?.textContent;
                 activeMicName.textContent = `${deviceName} (${selectedQuality}kbps)`;
-                logDebug(`Micrófono cambiado a: ${deviceName}`);
+                logDebug(`Micrófono: ${deviceName}`);
             } catch (error) { 
-                logDebug(`Error cambiando micrófono: ${error.message}`); 
+                logDebug(`Error: ${error.message}`); 
             }
         }
 
@@ -646,7 +681,7 @@
                     document.querySelectorAll('#txChannelSelector .channel-option').forEach(o => o.classList.remove('active')); 
                     opt.classList.add('active'); 
                     currentTxChannel = opt.getAttribute('data-channel'); 
-                    logDebug(`Canal cambiado a: ${currentTxChannel}`); 
+                    logDebug(`Canal: ${currentTxChannel}`); 
                 });
             });
         }
@@ -655,14 +690,14 @@
             const code = transmissionCode.textContent; 
             if (code && code !== '------') { 
                 navigator.clipboard.writeText(code); 
-                alert('✅ Código ' + code + ' copiado al portapapeles'); 
-                copyCodeBtn.textContent = '✅ ¡COPIADO!'; 
+                alert('✅ Código ' + code + ' copiado'); 
+                copyCodeBtn.textContent = '✅ COPIADO'; 
                 setTimeout(() => copyCodeBtn.textContent = '📋 COPIAR CÓDIGO', 2000); 
             } 
         });
         
         regenerateCodeBtn.addEventListener('click', async () => {
-            if (confirm('¿Generar nuevo código? La conexión actual se cerrará.')) {
+            if (confirm('¿Generar nuevo código? Se cerrará la conexión actual.')) {
                 if (currentCall) currentCall.close();
                 await startNewTransmission();
             }
@@ -670,16 +705,10 @@
         
         microphoneSelect.addEventListener('change', (e) => { if(e.target.value) switchMicrophone(e.target.value); });
         
-        // Event listener para cambio de calidad
         document.querySelectorAll('input[name="audioQuality"]').forEach(radio => {
-            radio.addEventListener('change', async () => {
-                if (localStream) {
-                    await switchQuality();
-                }
-            });
+            radio.addEventListener('change', async () => { if (localStream) await switchQuality(); });
         });
         
-        // Resaltar opción de calidad al hacer clic
         document.querySelectorAll('.quality-option').forEach(opt => {
             opt.addEventListener('click', () => {
                 document.querySelectorAll('.quality-option').forEach(o => o.classList.remove('selected'));
@@ -687,14 +716,22 @@
             });
         });
 
+        // Control de volumen del retorno
+        const returnVolumeSlider = document.getElementById('returnVolume');
+        const returnVolumeValue = document.getElementById('returnVolumeValue');
+        if (returnVolumeSlider) {
+            returnVolumeSlider.addEventListener('input', (e) => {
+                const val = e.target.value;
+                if (returnVolumeValue) returnVolumeValue.textContent = `${val}%`;
+                if (returnGainNode) returnGainNode.gain.value = val / 100;
+            });
+        }
+
         setupChannelSelector();
         
-        // Inicializar todo
         async function init() {
             await populateMicrophones();
-            if (microphoneSelect.value) {
-                await initMicrophone(microphoneSelect.value);
-            }
+            if (microphoneSelect.value) await initMicrophone(microphoneSelect.value);
             await startNewTransmission();
         }
         
